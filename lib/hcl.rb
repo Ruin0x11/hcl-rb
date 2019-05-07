@@ -1,3 +1,5 @@
 require "hcl/version"
+require "hcl/ast_visitor"
+require "hcl/decoder"
 require "hcl/parslet"
 require "hcl/parser"

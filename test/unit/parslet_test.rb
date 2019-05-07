@@ -9,8 +9,8 @@ class ParsletTest < Minitest::Test
     end
   end
 
-  def parse(s, it = nil)
-    HCL::Parser.new.parse(s, it)
+  def parse(src, it = nil)
+    HCL::Parser.new.parse(src, it)
   end
 
   def assert_parses(expected, src)
@@ -29,18 +29,18 @@ END
 )
 
     assert_parses({document:
-                   [{key: "x", value: {integer: "1"}}, {comment: "# hogehoge"}]},
+                   [{kv_key: "x", value: {integer: "1"}}, {comment: "# hogehoge"}]},
                   "x = 1 # hogehoge")
   end
 
   def test_parses_key_value
-    assert_parses({document: [{key: "a", value: {integer: "1"}}]}, "a=1")
-    assert_parses({document: [{key: "a", value: {integer: "1"}}]}, "a = 1")
-    assert_parses({document: [{key: "a", value: {string: "dood"}}]}, "a = \"dood\"")
+    assert_parses({document: [{kv_key: "a", value: {integer: "1"}}]}, "a=1")
+    assert_parses({document: [{kv_key: "a", value: {integer: "1"}}]}, "a = 1")
+    assert_parses({document: [{kv_key: "a", value: {string: "dood"}}]}, "a = \"dood\"")
   end
 
   def test_parses_bool
-    assert_parses({document: [{key: "x", value: {boolean: "true"}}, {key: "y", value: {boolean: "false"}}]}, <<'END'
+    assert_parses({document: [{kv_key: "x", value: {boolean: "true"}}, {kv_key: "y", value: {boolean: "false"}}]}, <<'END'
 x = true
 y = false
 END
@@ -49,9 +49,9 @@ END
 
   def test_parses_integer
     assert_parses({document:
-                   [{key: "x", value: {integer: "1"}},
-                    {key: "y", value: {integer: "0"}},
-                    {key: "z", value: {integer: "-1"}},
+                   [{kv_key: "x", value: {integer: "1"}},
+                    {kv_key: "y", value: {integer: "0"}},
+                    {kv_key: "z", value: {integer: "-1"}},
                    ]}, <<'END'
 x = 1
 y = 0
@@ -62,10 +62,10 @@ END
 
   def test_parses_float
     assert_parses({document:
-                   [{key: "x", value: {float: "1.0"}},
-                    {key: "y", value: {float: ".5"}},
-                    {key: "z", value: {float: "-124.12"}},
-                    {key: "w", value: {float: "-0.524"}},
+                   [{kv_key: "x", value: {float: "1.0"}},
+                    {kv_key: "y", value: {float: ".5"}},
+                    {kv_key: "z", value: {float: "-124.12"}},
+                    {kv_key: "w", value: {float: "-0.524"}},
                    ]}, <<'END'
 x = 1.0
 y = .5
@@ -77,7 +77,7 @@ END
 
   def test_parses_string_dq
     assert_parses({document:
-                   [{key: "x", value: {string: []}}
+                   [{kv_key: "x", value: {string: []}}
                    ]}, <<'END'
 x = ""
 END
@@ -90,9 +90,9 @@ END
 
 
     assert_parses({document:
-                   [{key: "x", value: {string: "hoge"}},
-                    {key: "y", value: {string: "hoge \\\"fuga\\\" hoge"}},
-                    {key: "z", value: {string: "\\u003F\\U0000003F"}},
+                   [{kv_key: "x", value: {string: "hoge"}},
+                    {kv_key: "y", value: {string: "hoge \\\"fuga\\\" hoge"}},
+                    {kv_key: "z", value: {string: "\\u003F\\U0000003F"}},
                     ]}, <<'END'
 x = "hoge"
 y = "hoge \"fuga\" hoge"
@@ -102,7 +102,7 @@ END
 
 
     assert_parses({document:
-                   [{key: "x", value: {string: "ｴｰﾃﾙ病"}}
+                   [{kv_key: "x", value: {string: "ｴｰﾃﾙ病"}}
                    ]}, <<'END'
 x = "ｴｰﾃﾙ病"
 END
@@ -111,9 +111,9 @@ END
 
   def test_parses_keys
     assert_parses({document:
-                   [{key: "x", value: {key: "hoge"}},
-                    {key: "y", value: {key: "hoge.fuga"}},
-                    {key: "z", value: {key: "_000.hoge::fuga-piyo"}},
+                   [{kv_key: "x", value: {key_string: "hoge"}},
+                    {kv_key: "y", value: {key_string: "hoge.fuga"}},
+                    {kv_key: "z", value: {key_string: "_000.hoge::fuga-piyo"}},
                    ]}, <<'END'
 x = hoge
 y = hoge.fuga
@@ -125,9 +125,9 @@ END
   def test_parses_hil
     assert_parses({document:
                    [
-                     {key: "x", value: {string: "${hoge}"}},
-                     {key: "y", value: {string: "${hoge {\\\"fuga\\\"} hoge}"}},
-                     {key: "z", value: {string: "${name(hoge)}"}},
+                     {kv_key: "x", value: {string: "${hoge}"}},
+                     {kv_key: "y", value: {string: "${hoge {\\\"fuga\\\"} hoge}"}},
+                     {kv_key: "z", value: {string: "${name(hoge)}"}},
                    ]}, <<'END'
 x = "${hoge}"
 y = "${hoge {\"fuga\"} hoge}"
@@ -143,7 +143,7 @@ END
 
   def test_parses_heredocs
     assert_parses({document:
-                   [{key: "piyo", value:
+                   [{kv_key: "piyo", value:
                      {heredoc: {backticks: "<<-",
                                 tag: "EOF",
                                 doc: "\n                        Outer text\n                                Indented text\n                        EOF"}}}
@@ -156,9 +156,9 @@ END
 )
 
     assert_parses({document:
-                   [{key: "hoge", value: {heredoc: {backticks: "<<", tag: "EOF", doc: "\nHello\nWorld\nEOF"}}},
-                    {key: "fuga", value: {heredoc: {backticks: "<<", tag: "FOO123", doc: "\n        hoge\n        fuga\nFOO123"}}},
-                    {key: "piyo", value: {heredoc: {backticks: "<<-", tag: "EOF", doc: "\n                        Outer text\n                                Indented text\n                        EOF"}}},
+                   [{kv_key: "hoge", value: {heredoc: {backticks: "<<", tag: "EOF", doc: "\nHello\nWorld\nEOF"}}},
+                    {kv_key: "fuga", value: {heredoc: {backticks: "<<", tag: "FOO123", doc: "\n        hoge\n        fuga\nFOO123"}}},
+                    {kv_key: "piyo", value: {heredoc: {backticks: "<<-", tag: "EOF", doc: "\n                        Outer text\n                                Indented text\n                        EOF"}}},
                    ]}, <<'END'
 hoge = <<EOF
 Hello
@@ -177,7 +177,7 @@ END
 
 
     assert_parses({document:
-                   [{key: "hoge", value: {heredoc: {backticks: "<<-", tag: "EOF", doc: "\n    Hello\n      World\n    EOF"}}},
+                   [{kv_key: "hoge", value: {heredoc: {backticks: "<<-", tag: "EOF", doc: "\n    Hello\n      World\n    EOF"}}},
                    ]}, <<'END'
 hoge = <<-EOF
     Hello
@@ -189,7 +189,7 @@ END
 
   def test_parses_string_sq
     assert_parses({document:
-                   [{key: "x", value: {string: ""}}
+                   [{kv_key: "x", value: {string: ""}}
                    ]}, <<'END'
 x = ''
 END
@@ -197,19 +197,19 @@ END
 
 
     assert_parses({document:
-                   [{key: "x", value: {string: "foo bar \"foo bar\""}}
+                   [{kv_key: "x", value: {string: "foo bar \"foo bar\""}}
                    ]}, <<'END'
 x = 'foo bar "foo bar"'
 END
 )
   end
 
-  def test_parses_arrays
+  def test_parses_lists
     assert_parses({document:
-                   [{key: "x", value: {array: [{value: {integer: "1"}}, {value: {integer: "2"}}, {value: {integer: "3"}}]}},
-                    {key: "y", value: {array: nil}},
-                    {key: "z", value: {array: [{value: {string: []}}, {value: {string: []}}]}},
-                    {key: "w", value: {array: [{value: {integer: "1"}},
+                   [{kv_key: "x", value: {list: [{value: {integer: "1"}}, {value: {integer: "2"}}, {value: {integer: "3"}}]}},
+                    {kv_key: "y", value: {list: nil}},
+                    {kv_key: "z", value: {list: [{value: {string: []}}, {value: {string: []}}]}},
+                    {kv_key: "w", value: {list: [{value: {integer: "1"}},
                                                {value: {string: "string"}},
                                                {value: {heredoc: {backticks: "<<",
                                                           tag: "EOF",
@@ -225,12 +225,12 @@ END
 )
   end
 
-  def test_parses_array_of_objects
+  def test_parses_list_of_objects
     assert_parses({document:
-                   [{key: "foo", value:
-                     {array: [
-                       {value: {object: [{key: "key", value: {string: "hoge"}}]}},
-                       {value: {object: [{key: "key", value: {string: "fuga"}}, {key: "key2", value: {string: "piyo"}}]}},
+                   [{kv_key: "foo", value:
+                     {list: [
+                       {value: {object: [{kv_key: "key", value: {string: "hoge"}}]}},
+                       {value: {object: [{kv_key: "key", value: {string: "fuga"}}, {kv_key: "key2", value: {string: "piyo"}}]}},
                      ]}}
                    ]}, <<'END'
 foo = [
@@ -241,11 +241,31 @@ END
 )
   end
 
-  def test_parses_array_with_comments
+  def test_parses_list_with_comments
     assert_parses({document:
-                   [{key: "foo", value:
+                   [{kv_key: "foo", value:
                      [{comment: "# foo\n"},
-                      {array: [
+                      {list: [
+                        {value: {integer: "1"}}, {value: [{comment: "# bar\n"}, {integer: "2"}]}, {value: {integer: "3"}}
+                      ]},
+                     ]},
+                    {comment: "# baz\n"}
+                   ]}, <<'END'
+foo = [ # foo
+1,
+# bar
+2,
+3,
+] # baz
+END
+                 )
+  end
+
+  def test_parses_list_leading_comment
+    assert_parses({document:
+                   [{kv_key: "foo", value:
+                     [{comment: "# foo\n"},
+                      {list: [
                         {value: {integer: "1"}}, {value: [{comment: "# bar\n"}, {integer: "2"}]}, {value: {integer: "3"}}
                       ]},
                      ]},
@@ -262,24 +282,24 @@ END
   end
 
   def test_parses_objects
-    assert_parses({document: [{key: "a", keys: [],  value: {object: [{key: "b", value: {integer: "1"}}]}}]}, "a {b = 1}")
-    assert_parses({document: [{key: "a",  value: {object: [{key: "b", value: {integer: "1"}}]}}]}, "a = {b = 1}")
+    assert_parses({document: [{kv_key: "a", keys: [],  value: {object: [{kv_key: "b", value: {integer: "1"}}]}}]}, "a {b = 1}")
+    assert_parses({document: [{kv_key: "a",  value: {object: [{kv_key: "b", value: {integer: "1"}}]}}]}, "a = {b = 1}")
 
-    assert_parses({document: [{key: "root", keys: [], value: {object: [{key: "a", value: {integer: "1"}}]}}]}, "root {\na = 1\n}")
-    assert_parses({document: [{key: "root", keys: [], value: {object: [{key: "a", value: {integer: "1"}}, {key: "b", value: {integer: "2"}}]}}]}, "root {\na = 1, b = 2\n}")
+    assert_parses({document: [{kv_key: "root", keys: [], value: {object: [{kv_key: "a", value: {integer: "1"}}]}}]}, "root {\na = 1\n}")
+    assert_parses({document: [{kv_key: "root", keys: [], value: {object: [{kv_key: "a", value: {integer: "1"}}, {kv_key: "b", value: {integer: "2"}}]}}]}, "root {\na = 1, b = 2\n}")
 
     assert_parses({document:
-                   [{key: "foo", value: {object: ""}}
+                   [{kv_key: "foo", value: {object: ""}}
                    ]}, <<'END'
 foo = {}
 END
 )
 
     assert_parses({document:
-                   [{key: "foo", value:
+                   [{kv_key: "foo", value:
                      {object: [
-                       {key: "bar", value: {string: "hoge"}},
-                       {key: "baz", value: {array: {value: {string: "piyo"}}}}]}
+                       {kv_key: "bar", value: {string: "hoge"}},
+                       {kv_key: "baz", value: {list: {value: {string: "piyo"}}}}]}
                     }]}, <<'END'
 foo = {
     bar = "hoge"
@@ -289,12 +309,12 @@ END
 )
 
     assert_parses({document:
-                   [{key: "foo", value: [
+                   [{kv_key: "foo", value: [
                        {comment: "# comment\n"},
                        {comment: "# comment\n"},
-                       {object: [{key: "bar", value: {string: "hoge"}},
+                       {object: [{kv_key: "bar", value: {string: "hoge"}},
                                  {comment: "# comment\n"},
-                                 {key: "baz", value: {array: {value: {string: "piyo"}}}},
+                                 {kv_key: "baz", value: {list: {value: {string: "piyo"}}}},
                                  {comment: "# comment\n"}]},
                        {comment: "# comment\n"}]}
                    ]}, <<'END'
@@ -307,9 +327,9 @@ END
 )
 
     assert_parses({document:
-                   [{key: "foo", value:
+                   [{kv_key: "foo", value:
                                  {object: [
-                                   {key: "bar", value: {object: ""}}]}
+                                   {kv_key: "bar", value: {object: ""}}]}
                                 }]}, <<'END'
 foo = {
     bar = {}
@@ -318,10 +338,10 @@ END
 )
 
     assert_parses({document:
-                   [{key: "foo", value:
+                   [{kv_key: "foo", value:
                       {object: [
-                        {key: "bar", value: {object: ""}},
-                        {key: "foo", value: {boolean: "true"}}]
+                        {kv_key: "bar", value: {object: ""}},
+                        {kv_key: "foo", value: {boolean: "true"}}]
                       }}]}, <<'END'
 foo = {
     bar = {}
@@ -333,21 +353,21 @@ END
 
   def test_parses_nested_keys
     assert_parses({document:
-                   [{key: "foo", keys: [], value: {object: ""}}
+                   [{kv_key: "foo", keys: [], value: {object: ""}}
                    ]}, <<'END'
 foo {}
 END
 )
 
     assert_parses({document:
-                   [{key: "foo", value: {object: ""}}
+                   [{kv_key: "foo", value: {object: ""}}
                    ]}, <<'END'
 foo = {}
 END
 )
 
     assert_parses({document:
-                   [{key: "foo", value: {key: "bar"}}
+                   [{kv_key: "foo", value: {key_string: "bar"}}
                    ]}, <<'END'
 foo = bar
 END
@@ -355,7 +375,7 @@ END
 
 
     assert_parses({document:
-                   [{key: "foo", value: {integer: "123"}}
+                   [{kv_key: "foo", value: {integer: "123"}}
                    ]}, <<'END'
 foo = 123
 END
@@ -363,14 +383,14 @@ END
 
 
     assert_parses({document:
-                   [{key: {string: "foo"}, keys: [],  value: {object: ""}}
+                   [{kv_key: {string: "foo"}, keys: [],  value: {object: ""}}
                    ]}, <<'END'
 "foo" {}
 END
 )
 
     assert_parses({document:
-                   [{key: {string: "foo"}, value: {string: "${var.bar}"}}
+                   [{kv_key: {string: "foo"}, value: {string: "${var.bar}"}}
                    ]}, <<'END'
 "foo" = "${var.bar}"
 END
@@ -378,40 +398,40 @@ END
 
 
     assert_parses({document:
-                   [{key: "foo", keys: [{key: "bar"}], value: {object: ""}}
+                   [{kv_key: "foo", keys: [{key: "bar"}], value: {object: ""}}
                    ]}, <<'END'
 foo bar {}
 END
 )
 
     assert_parses({document:
-                   [{key: "foo", keys: [{key: {string: "bar"}}], value: {object: ""}}
+                   [{kv_key: "foo", keys: [{key: {string: "bar"}}], value: {object: ""}}
                    ]}, <<'END'
 foo "bar" {}
 END
 )
 
     assert_parses({document:
-                   [{key: {string: "foo"}, keys: [{key: "bar"}], value: {object: ""}}
+                   [{kv_key: {string: "foo"}, keys: [{key: "bar"}], value: {object: ""}}
                    ]}, <<'END'
 "foo" bar {}
 END
 )
 
     assert_parses({document:
-                   [{key: "foo", keys: [{key: "bar"}, {key: "baz"}], value: {object: ""}}
+                   [{kv_key: "foo", keys: [{key: "bar"}, {key: "baz"}], value: {object: ""}}
                    ]}, <<'END'
 foo bar baz {}
 END
 )
 
     assert_parses({document:
-                   [{key: "foo", keys: [{key: {string: "bar"}}, {key: "baz"}], value:
+                   [{kv_key: "foo", keys: [{key: {string: "bar"}}, {key: "baz"}], value:
                      {object: [
-                       {key: {string: "hoge"}, value: {key: "fuge"}}]}},
-                    {key: {string: "foo"}, keys: [{key: "bar"}, {key: "baz"}], value:
+                       {kv_key: {string: "hoge"}, value: {key_string: "fuge"}}]}},
+                    {kv_key: {string: "foo"}, keys: [{key: "bar"}, {key: "baz"}], value:
                      {object: [
-                       {key: "hogera", value: {string: "fugera"}}]}}
+                       {kv_key: "hogera", value: {string: "fugera"}}]}}
                    ]}, <<'END'
 foo "bar" baz { "hoge" = fuge }
 "foo" bar baz { hogera = "fugera" }
@@ -420,9 +440,9 @@ END
 
 
     assert_parses({document:
-                   [{key: "foo", value: {integer: "6"}},
-                    {key: "foo", keys: [{key: {string: "bar"}}], value:
-                     {object: [{key: "hoge", value: {string: "piyo"}}]}}
+                   [{kv_key: "foo", value: {integer: "6"}},
+                    {kv_key: "foo", keys: [{key: {string: "bar"}}], value:
+                     {object: [{kv_key: "hoge", value: {string: "piyo"}}]}}
                    ]}, <<'END'
 foo = 6
 foo "bar" { hoge = "piyo" }
@@ -434,11 +454,11 @@ END
 
   def test_parses_comment_newlines
     assert_parses({document:
-                   [{:comment=>"# Hello\n"}, {:comment=>"# World\n"}]},
+                   [{comment:"# Hello\n"}, {comment: "# World\n"}]},
                   "# Hello\n# World\n")
 
     assert_parses({document:
-                   [{:comment=>"# Hello\r\n"}, {:comment=>"# Windows"}]},
+                   [{comment: "# Hello\r\n"}, {comment: "# Windows"}]},
                   "# Hello\r\n# Windows")
   end
 

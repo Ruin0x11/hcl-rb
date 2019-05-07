@@ -10,19 +10,23 @@ class HCL::Parslet < Parslet::Parser
 
   rule(:value) {
     boolean.as(:boolean) |
-    array |
+    list |
     object |
     float.as(:float) |
     integer.as(:integer) |
     string |
-    key.as(:key) |
+    key.as(:key_string) |
     heredoc.as(:heredoc)
   }
 
+  rule(:trailing_comma?) {
+    (all_space >> str(",").maybe).maybe
+  }
+
   rule(:object) {
-    str("{") >> array_comments >> all_space >>
-      ( ( key_value >> (all_space >> str(",").maybe).maybe >> array_comments >> all_space ).repeat ).maybe.as(:object) >>
-      str("}") >> array_comments
+    str("{") >> list_comments >> all_space >>
+      ( ( key_value >> list_comments >> all_space ).repeat ).maybe.as(:object) >>
+      str("}") >> list_comments
   }
 
   rule(:sign) { str("-") }
@@ -48,8 +52,8 @@ class HCL::Parslet < Parslet::Parser
   }
 
   rule(:key_value) {
-    space >> key.as(:key) >> space >>
-      ((key.as(:key) >> space).repeat.as(:keys) >> object.as(:value) | (str("=") >> space >> value.as(:value)))
+    space >> key.as(:kv_key) >> space >>
+      ((key.as(:key) >> space).repeat.as(:keys) >> object.as(:value) | (str("=") >> space >> value.as(:value))) >> trailing_comma?
   }
 
   rule (:sq_string) {
@@ -124,26 +128,26 @@ class HCL::Parslet < Parslet::Parser
   rule(:multiline_comment) { str("/*") >> (str("*/").absent? >> any).repeat >> str("*/") }
   rule(:comment) { (single_comment | multiline_comment).as(:comment) }
 
-  # Finding comments in multiline arrays requires accepting a bunch of
+  # Finding comments in multiline lists requires accepting a bunch of
   # possible newlines and stuff before the comment
-  rule(:array_comments) { (all_space >> comment_line).repeat }
+  rule(:list_comments) { (all_space >> comment_line).repeat }
 
-  rule(:array) {
-    str("[") >> all_space >> array_comments >>
-    ( array_comments >> # Match any comments on first line
+  rule(:list) {
+    str("[") >> all_space >> list_comments >>
+    ( list_comments >> # Match any comments on first line
      dood >>
       (all_space >> str(",")).maybe >> # possible trailing comma
-      all_space >> array_comments # Grab any remaining comments just in case
-    ).maybe.as(:array) >> str("]")
+      all_space >> list_comments # Grab any remaining comments just in case
+    ).maybe.as(:list) >> str("]")
   }
 
   rule (:dood) {
-      all_space >> (value >> array_comments).as(:value) >>
+      all_space >> (value >> list_comments).as(:value) >>
       (
         # Separator followed by any comments
-        all_space >> str(",") >> (array_comments >>
+        all_space >> str(",") >> (list_comments >>
         # Value followed by any comments
-        all_space >> value).as(:value) >> array_comments >> all_space
+        all_space >> value).as(:value) >> list_comments >> all_space
       ).repeat
   }
 end
