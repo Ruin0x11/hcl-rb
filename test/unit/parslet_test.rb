@@ -5,12 +5,12 @@ require File.expand_path('../../test_helper', __FILE__)
 class ParsletTest < Minitest::Test
   def assert_fails_parse(i)
     assert_raises Parslet::ParseFailed do
-      HCL::Parser.new.parse(i)
+      HCL::Parslet.new.parse(i)
     end
   end
 
-  def parse(src, it = nil)
-    HCL::Parser.new.parse(src, it)
+  def parse(src)
+    HCL::Parslet.new.parse(src)
   end
 
   def assert_parses(expected, src)
@@ -26,7 +26,7 @@ class ParsletTest < Minitest::Test
 # hogehoge
 // fuga hoge
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "x", value: {integer: "1"}}, {comment: "# hogehoge"}]},
@@ -44,7 +44,7 @@ END
 x = true
 y = false
 END
-)
+                 )
   end
 
   def test_parses_integer
@@ -57,7 +57,7 @@ x = 1
 y = 0
 z = -1
 END
-)
+                 )
   end
 
   def test_parses_float
@@ -72,7 +72,7 @@ y = .5
 z = -124.12
 w = -0.524
 END
-)
+                 )
   end
 
   def test_parses_string_dq
@@ -81,24 +81,24 @@ END
                    ]}, <<'END'
 x = ""
 END
-)
+                 )
 
     assert_fails_parse(<<'END'
 x = "hoge \"
 END
-)
+                      )
 
 
     assert_parses({document:
                    [{kv_key: "x", value: {string: "hoge"}},
                     {kv_key: "y", value: {string: "hoge \\\"fuga\\\" hoge"}},
                     {kv_key: "z", value: {string: "\\u003F\\U0000003F"}},
-                    ]}, <<'END'
+                   ]}, <<'END'
 x = "hoge"
 y = "hoge \"fuga\" hoge"
 z = "\u003F\U0000003F"
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -106,7 +106,16 @@ END
                    ]}, <<'END'
 x = "ｴｰﾃﾙ病"
 END
-)
+                 )
+
+    assert_parses({document:
+                   [{kv_key: "x", value: {string: "\\n"}},
+                    {kv_key: "y", value: {string: "\\\\n"}}
+                   ]}, <<'END'
+x = "\n"
+y = "\\n"
+END
+                 )
   end
 
   def test_parses_keys
@@ -119,7 +128,7 @@ x = hoge
 y = hoge.fuga
 z = _000.hoge::fuga-piyo
 END
-)
+                 )
   end
 
   def test_parses_hil
@@ -133,12 +142,12 @@ x = "${hoge}"
 y = "${hoge {\"fuga\"} hoge}"
 z = "${name(hoge)}"
 END
-)
+                 )
 
     assert_fails_parse(<<'END'
 x = "${hoge"
 END
-)
+                      )
   end
 
   def test_parses_heredocs
@@ -153,7 +162,7 @@ piyo = <<-EOF
                                 Indented text
                         EOF
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "hoge", value: {heredoc: {backticks: "<<", tag: "EOF", doc: "\nHello\nWorld\nEOF"}}},
@@ -173,7 +182,7 @@ piyo = <<-EOF
                                 Indented text
                         EOF
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -184,7 +193,7 @@ hoge = <<-EOF
       World
     EOF
 END
-)
+                 )
   end
 
   def test_parses_string_sq
@@ -193,7 +202,7 @@ END
                    ]}, <<'END'
 x = ''
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -201,7 +210,16 @@ END
                    ]}, <<'END'
 x = 'foo bar "foo bar"'
 END
-)
+                 )
+
+    assert_parses({document:
+                   [{kv_key: "x", value: {string: "\\n"}},
+                    {kv_key: "y", value: {string: "\\\\n"}}
+                   ]}, <<'END'
+x = '\n'
+y = '\\n'
+END
+                 )
   end
 
   def test_parses_lists
@@ -210,10 +228,10 @@ END
                     {kv_key: "y", value: {list: nil}},
                     {kv_key: "z", value: {list: [{value: {string: []}}, {value: {string: []}}]}},
                     {kv_key: "w", value: {list: [{value: {integer: "1"}},
-                                               {value: {string: "string"}},
-                                               {value: {heredoc: {backticks: "<<",
-                                                          tag: "EOF",
-                                                          doc: "\nheredoc contents\nEOF"}}}]}},
+                                                 {value: {string: "string"}},
+                                                 {value: {heredoc: {backticks: "<<",
+                                                                    tag: "EOF",
+                                                                    doc: "\nheredoc contents\nEOF"}}}]}},
                    ]}, <<'END'
 x = [1, 2, 3]
 y = []
@@ -222,7 +240,7 @@ w = [1, "string", <<EOF
 heredoc contents
 EOF]
 END
-)
+                 )
   end
 
   def test_parses_list_of_objects
@@ -238,7 +256,7 @@ foo = [
   {key = "fuga", key2 = "piyo"},
 ]
 END
-)
+                 )
   end
 
   def test_parses_list_with_comments
@@ -293,7 +311,7 @@ END
                    ]}, <<'END'
 foo = {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", value:
@@ -306,17 +324,17 @@ foo = {
     baz = ["piyo"]
 }
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", value: [
-                       {comment: "# comment\n"},
-                       {comment: "# comment\n"},
-                       {object: [{kv_key: "bar", value: {string: "hoge"}},
-                                 {comment: "# comment\n"},
-                                 {kv_key: "baz", value: {list: {value: {string: "piyo"}}}},
-                                 {comment: "# comment\n"}]},
-                       {comment: "# comment\n"}]}
+                     {comment: "# comment\n"},
+                     {comment: "# comment\n"},
+                     {object: [{kv_key: "bar", value: {string: "hoge"}},
+                               {comment: "# comment\n"},
+                               {kv_key: "baz", value: {list: {value: {string: "piyo"}}}},
+                               {comment: "# comment\n"}]},
+                     {comment: "# comment\n"}]}
                    ]}, <<'END'
 foo = { # comment
 # comment
@@ -324,31 +342,31 @@ foo = { # comment
     baz = ["piyo"] # comment
 } # comment
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", value:
-                                 {object: [
-                                   {kv_key: "bar", value: {object: ""}}]}
-                                }]}, <<'END'
+                     {object: [
+                       {kv_key: "bar", value: {object: ""}}]}
+                    }]}, <<'END'
 foo = {
     bar = {}
 }
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", value:
-                      {object: [
-                        {kv_key: "bar", value: {object: ""}},
-                        {kv_key: "foo", value: {boolean: "true"}}]
-                      }}]}, <<'END'
+                     {object: [
+                       {kv_key: "bar", value: {object: ""}},
+                       {kv_key: "foo", value: {boolean: "true"}}]
+                     }}]}, <<'END'
 foo = {
     bar = {}
     foo = true
 }
 END
-)
+                 )
   end
 
   def test_parses_nested_keys
@@ -357,21 +375,21 @@ END
                    ]}, <<'END'
 foo {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", value: {object: ""}}
                    ]}, <<'END'
 foo = {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", value: {key_string: "bar"}}
                    ]}, <<'END'
 foo = bar
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -379,7 +397,7 @@ END
                    ]}, <<'END'
 foo = 123
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -387,14 +405,14 @@ END
                    ]}, <<'END'
 "foo" {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: {string: "foo"}, value: {string: "${var.bar}"}}
                    ]}, <<'END'
 "foo" = "${var.bar}"
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -402,28 +420,28 @@ END
                    ]}, <<'END'
 foo bar {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", keys: [{key: {string: "bar"}}], value: {object: ""}}
                    ]}, <<'END'
 foo "bar" {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: {string: "foo"}, keys: [{key: "bar"}], value: {object: ""}}
                    ]}, <<'END'
 "foo" bar {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", keys: [{key: "bar"}, {key: "baz"}], value: {object: ""}}
                    ]}, <<'END'
 foo bar baz {}
 END
-)
+                 )
 
     assert_parses({document:
                    [{kv_key: "foo", keys: [{key: {string: "bar"}}, {key: "baz"}], value:
@@ -436,7 +454,7 @@ END
 foo "bar" baz { "hoge" = fuge }
 "foo" bar baz { hogera = "fugera" }
 END
-)
+                 )
 
 
     assert_parses({document:
@@ -447,7 +465,7 @@ END
 foo = 6
 foo "bar" { hoge = "piyo" }
 END
-)
+                 )
 
     assert_fails_parse "a b c = 1"
   end
@@ -480,83 +498,83 @@ END
 fuga
  */
 END
-)
+                 )
   end
 
-  def test_official
-    files = {
-      "assign_colon.hcl" =>
-        {line: 2,
-         column: 7,
-         end_column: 7,
-         msg: "found invalid token when parsing object keys near ':'"},
-      "comment.hcl" => nil,
-      "comment_crlf.hcl" => nil,
-      "comment_lastline.hcl" => nil,
-      "comment_single.hcl" => nil,
-      "empty.hcl" => nil,
-      "list_comma.hcl" => nil,
-      "multiple.hcl" => nil,
-      "object_list_comma.hcl" => nil,
-      "structure.hcl" => nil,
-      "structure_basic.hcl" => nil,
-      "structure_empty.hcl" => nil,
-      "complex.hcl" => nil,
-      "complex_crlf.hcl" => nil,
-      "types.hcl" => nil,
-      "array_comment.hcl" => nil,
-      "array_comment_2.hcl" =>
-        {line: 4,
-         column: 5,
-         end_column: 47,
-         msg: "error parsing list, expected comma or list end near '\"${path.module}/scripts/install-haproxy.sh\"'"},
-      "missing_braces.hcl" =>
-        {line: 3,
-         column: 22,
-         end_column: 22,
-         msg: "found invalid token when parsing object keys near '$'"},
-      "unterminated_object.hcl" =>
-        {line: 3,
-         column: 1,
-         end_column: 1,
-         msg: "expected end of object list near <eof>"},
-      "unterminated_object_2.hcl" =>
-        {line: 7,
-         column: 1,
-         end_column: 1,
-         msg: "expected end of object list near <eof>"},
-      "key_without_value.hcl" =>
-        {line: 2,
-         column: 1,
-         end_column: 1,
-         msg: "end of file reached near <eof>"},
-      "object_key_without_value.hcl" =>
-        {line: 3,
-         column: 1,
-         end_column: 1,
-         msg: "found invalid token when parsing object keys near '}'"},
-      "object_key_assign_without_value.hcl" =>
-        {line: 3,
-         column: 1,
-         end_column: 1,
-         msg: "Unknown token near '}'"},
-      "object_key_assign_without_value2.hcl" =>
-        {line: 4,
-         column: 1,
-         end_column: 1,
-         msg: "Unknown token near '}'"},
-      "object_key_assign_without_value3.hcl" =>
-        {line: 3,
-         column: 7,
-         end_column: 7,
-         msg: "expected to find at least one object key near '='"},
-      "git_crypt.hcl" =>
-        {line: 1,
-         column: 1,
-         end_column: 1,
-         msg: "found invalid token when parsing object keys near '\\0'"}}
+  @@files = {
+    "assign_colon.hcl" =>
+      {line: 2,
+       column: 7,
+       end_column: 7,
+       msg: "found invalid token when parsing object keys near ':'"},
+    "comment.hcl" => nil,
+    "comment_crlf.hcl" => nil,
+    "comment_lastline.hcl" => nil,
+    "comment_single.hcl" => nil,
+    "empty.hcl" => nil,
+    "list_comma.hcl" => nil,
+    "multiple.hcl" => nil,
+    "object_list_comma.hcl" => nil,
+    "structure.hcl" => nil,
+    "structure_basic.hcl" => nil,
+    "structure_empty.hcl" => nil,
+    "complex.hcl" => nil,
+    "complex_crlf.hcl" => nil,
+    "types.hcl" => nil,
+    "array_comment.hcl" => nil,
+    "array_comment_2.hcl" =>
+      {line: 4,
+       column: 5,
+       end_column: 47,
+       msg: "error parsing list, expected comma or list end near '\"${path.module}/scripts/install-haproxy.sh\"'"},
+    "missing_braces.hcl" =>
+      {line: 3,
+       column: 22,
+       end_column: 22,
+       msg: "found invalid token when parsing object keys near '$'"},
+    "unterminated_object.hcl" =>
+      {line: 3,
+       column: 1,
+       end_column: 1,
+       msg: "expected end of object list near <eof>"},
+    "unterminated_object_2.hcl" =>
+      {line: 7,
+       column: 1,
+       end_column: 1,
+       msg: "expected end of object list near <eof>"},
+    "key_without_value.hcl" =>
+      {line: 2,
+       column: 1,
+       end_column: 1,
+       msg: "end of file reached near <eof>"},
+    "object_key_without_value.hcl" =>
+      {line: 3,
+       column: 1,
+       end_column: 1,
+       msg: "found invalid token when parsing object keys near '}'"},
+    "object_key_assign_without_value.hcl" =>
+      {line: 3,
+       column: 1,
+       end_column: 1,
+       msg: "Unknown token near '}'"},
+    "object_key_assign_without_value2.hcl" =>
+      {line: 4,
+       column: 1,
+       end_column: 1,
+       msg: "Unknown token near '}'"},
+    "object_key_assign_without_value3.hcl" =>
+      {line: 3,
+       column: 7,
+       end_column: 7,
+       msg: "expected to find at least one object key near '='"},
+    "git_crypt.hcl" =>
+      {line: 1,
+       column: 1,
+       end_column: 1,
+       msg: "found invalid token when parsing object keys near '\\0'"}}
 
-    files.each do |file, error|
+  @@files.each do |file, error|
+    define_method "test_" + file.gsub(".", "_dot_") do
       src = File.read(File.expand_path("test/fixtures/parser/#{file}"))
 
       if error.nil?

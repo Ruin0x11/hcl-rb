@@ -13,6 +13,7 @@ class HCL::Parslet < Parslet::Parser
     list |
     object |
     float.as(:float) |
+    scientific.as(:float) |
     integer.as(:integer) |
     string |
     key.as(:key_string) |
@@ -21,6 +22,9 @@ class HCL::Parslet < Parslet::Parser
 
   rule(:trailing_comma?) {
     (all_space >> str(",").maybe).maybe
+  }
+
+  rule (:dood) {
   }
 
   rule(:object) {
@@ -39,6 +43,11 @@ class HCL::Parslet < Parslet::Parser
 
   rule(:exponent) {
     match["eE"] >> match["+\\-"].maybe >> match["0-9"].repeat
+  }
+
+  rule(:scientific) {
+    sign? >>
+      (match["0-9"] >> match["0-9"].repeat) >> exponent
   }
 
   rule(:float) {
@@ -73,7 +82,7 @@ class HCL::Parslet < Parslet::Parser
   }
 
   rule(:hil_inner) {
-    brace | match["^\"\\\\}"] | escape
+    brace | match["^\\\\}"] | escape
   }
 
   rule(:hil) {
@@ -90,6 +99,16 @@ class HCL::Parslet < Parslet::Parser
       tag.capture(:tag).as(:tag) >> doc.as(:doc)
   }
 
+  rule(:hex) {
+    match["0-9a-fA-F"]
+  }
+
+  rule(:escape) {
+    str("\\") >> (match["bfnrt\"\\\\"] |
+                  (str("u") >> hex.repeat(4,4)) |
+                   (str("U") >> hex.repeat(8,8)))
+  }
+
   # the tag that delimits the heredoc
   rule(:tag) { match['\\w\\d'].repeat(1) }
   # the doc itself, ends when tag is found at start of line
@@ -104,16 +123,6 @@ class HCL::Parslet < Parslet::Parser
   rule(:gobble_eol) { (newline.absent? >> any).repeat >> newline }
 
   rule(:backticks) { str('<<') >> str("-").maybe }
-
-  rule(:hex) {
-    match["0-9a-fA-F"]
-  }
-
-  rule(:escape) {
-    str("\\") >> (match["bfnrt\"\\\\"] |
-                  (str("u") >> hex.repeat(4,4)) |
-                   (str("U") >> hex.repeat(8,8)))
-  }
 
   rule(:boolean) { str("true") | str("false") }
 
